@@ -1,9 +1,11 @@
+require 'json'
+
 class Game
 
-    attr_reader :word, :word_status
     @@words = []
+    @@MAX_GUESSES = 10
 
-    def initialize
+    def initialize()
 
         if @@words.length == 0
             word_array = File.readlines('google-10000-english-no-swears.txt')
@@ -19,13 +21,77 @@ class Game
 
         @word = @@words[random_idx]
         @word_status = "_" * @word.length
-        @guesses_left = 10
         @correct_letters = []
         @incorrect_letters = []
 
     end
 
-    def guess_letter?(letter)
+    def save_game()
+        print "Enter the game name you will save as (case-sensitive): "
+        username = gets.chomp
+        filename = "saved/#{username}.json"
+        while File.exist?(filename)
+            puts "Please type in a different game name as this one is invalid or already taken."
+            username = gets.chomp
+            filename = "saved/#{username}.json"
+        end
+        saved_game = JSON.dump({
+            username: username,
+            word: @word,
+            word_status: @word_status,
+            correct_letters: @correct_letters,
+            incorrect_letters: @incorrect_letters
+        })
+        filename = "saved/#{username}.json"
+        file = File.open(filename, 'w')
+        file.puts saved_game
+        file.close()
+        puts "Your game has been saved under: #{username}"
+    end
+
+    def load_game()
+        puts "Enter the username you saved your game as (case-sensitive)."
+        username = gets.chomp
+        filename = "saved/#{username}.json"
+        until File.exist?(filename)
+            puts "Invalid username"
+            puts "Enter the username you saved your game as."
+            username = gets.chomp
+            filename = "saved/#{username}.json"
+        end
+
+        data = JSON.load File.read(filename)
+        puts data
+        @word = data['word']
+        @word_status = data['word_status']
+        @correct_letters = data['correct_letters']
+        @incorrect_letters = data['incorrect_letters']
+        puts "Loaded #{data['username']}'s game"
+    end
+
+    def check_win()
+
+        if @@MAX_GUESSES-@incorrect_letters.length <= 0
+            #game loss
+            puts "You have lost the game"
+            puts "The word was #{@word}"
+            return -1
+        end
+
+        for i in 0...@word.length
+            if @word_status[i] == '_'
+                #game continues
+                return 0
+            end
+        end
+
+        #game won
+        puts "You have won the game"
+        return -1
+
+    end
+
+    def guess_letter(letter)
 
         letter_found = false
 
@@ -40,7 +106,6 @@ class Game
             @correct_letters.push(letter)
         else
             @incorrect_letters.push(letter)
-            @guesses_left -= 1
         end
 
         return letter_found
@@ -51,6 +116,26 @@ class Game
         puts @word_status
         puts "Correct Guesses: #{@correct_letters.join(' ')}"
         puts "Incorrect Guesses: #{@incorrect_letters.join(' ')}"
-        puts "You have #{@guesses_left} left"
+        puts "You have #{@@MAX_GUESSES-@incorrect_letters.length} guesses left\n\n"
+    end
+
+    def game_actions()
+        puts "Enter one of the following: "
+        puts "  'Save' to save the game"
+        puts "  'Load' to load a previously saved game"
+        puts "  Any letter between 'a-z' to guess that letter"
+        response = gets.chomp.downcase()
+        until response.match?('^save$|^load$|^[a-z]$')
+            puts "Invalid response"
+            puts "Enter a valid response from the options above"
+            response = gets.chomp.downcase
+        end
+        if response == 'save'
+            save_game()
+        elsif response == 'load'
+            load_game()
+        else
+            guess_letter(response)
+        end
     end
 end
