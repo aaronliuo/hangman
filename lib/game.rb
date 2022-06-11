@@ -2,6 +2,8 @@ require 'json'
 
 class Game
 
+    attr_reader :game_end
+
     @@words = []
     @@MAX_GUESSES = 10
 
@@ -23,15 +25,15 @@ class Game
         @word_status = "_" * @word.length
         @correct_letters = []
         @incorrect_letters = []
-
+        @game_end = false
     end
 
     def save_game()
         print "Enter the game name you will save as (case-sensitive): "
         username = gets.chomp
         filename = "saved/#{username}.json"
-        while File.exist?(filename)
-            puts "Please type in a different game name as this one is invalid or already taken."
+        while username.match?(' |/')
+            puts "Invalid file name. Please type in a different game name."
             username = gets.chomp
             filename = "saved/#{username}.json"
         end
@@ -50,6 +52,10 @@ class Game
     end
 
     def load_game()
+        usernames = Dir["saved/*"]
+        usernames = usernames.map { |user| user.slice(6...-5) }
+        puts "These are the currently saved usernames"
+        usernames.each { |user| puts user }
         puts "Enter the username you saved your game as (case-sensitive)."
         username = gets.chomp
         filename = "saved/#{username}.json"
@@ -74,20 +80,21 @@ class Game
         if @@MAX_GUESSES-@incorrect_letters.length <= 0
             #game loss
             puts "You have lost the game"
-            puts "The word was #{@word}"
-            return -1
+            puts "The word was '#{@word}'"
+            @game_end = true
         end
 
         for i in 0...@word.length
             if @word_status[i] == '_'
                 #game continues
-                return 0
+                return
             end
         end
 
         #game won
         puts "You have won the game"
-        return -1
+        puts "The word was '#{@word}'"
+        @game_end = true
 
     end
 
@@ -123,9 +130,10 @@ class Game
         puts "Enter one of the following: "
         puts "  'Save' to save the game"
         puts "  'Load' to load a previously saved game"
+        puts "  'Quit' to quit the game"
         puts "  Any letter between 'a-z' to guess that letter"
         response = gets.chomp.downcase()
-        until response.match?('^save$|^load$|^[a-z]$')
+        until response.match?('^save$|^load$|^quit$|^[a-z]$')
             puts "Invalid response"
             puts "Enter a valid response from the options above"
             response = gets.chomp.downcase
@@ -134,6 +142,8 @@ class Game
             save_game()
         elsif response == 'load'
             load_game()
+        elsif response == 'quit'
+            @game_end = true
         else
             guess_letter(response)
         end

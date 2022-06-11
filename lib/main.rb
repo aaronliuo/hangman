@@ -2,14 +2,11 @@ require_relative 'game.rb'
 
 def play_game()
     game = Game.new()
-    quit_game = 0
-    while quit_game == 0
+    while !game.game_end
         game.display_game_state()
         game.game_actions()
-        quit_game = game.check_win()
+        game.check_win()
     end
-
-    game.display_game_state()
 end
 
 while true
